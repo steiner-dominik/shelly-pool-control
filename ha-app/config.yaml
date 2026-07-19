@@ -1,6 +1,9 @@
+# NOTE: the authoritative copy of this manifest lives in
+# https://github.com/steiner-dominik/home-assistant-apps (ha-shelly-pool-control/).
+# When releasing, bump the version THERE to a published image tag.
 name: "Shelly Pool Control"
 description: "Solar pool heating panel for a Shelly 2PM/1PM controller: monitoring, settings, history, backups — the control logic itself runs on the Shelly"
-version: "2026.7.20.1"
+version: "2026.07.19.1"
 slug: "shelly_pool_control"
 url: "https://github.com/steiner-dominik/shelly-pool-control"
 # Prebuilt multi-arch image, published from the application source repo.
