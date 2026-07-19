@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+server/app/static/
+
+# Shelly build output
+shelly/build/
+
+# Runtime data (never commit!)
+data/
+*.sqlite3
+*.db
+backups/
+
+# Secrets (never commit!)
+.env
+*.env
+!deploy/env.example
+*.pem
+*.key
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

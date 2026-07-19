@@ -1,0 +1,26 @@
+# shelly-pool-control — example deployment
+#
+# 1. Download env.example next to this file, rename it to `.env`, edit it.
+# 2. docker compose up -d
+# 3. Open http://<host>:8080 and create the admin account.
+#
+# Put a TLS-terminating reverse proxy (Caddy, Traefik, nginx) in front of it
+# before exposing it to the internet, and set POOL_TRUSTED_PROXIES.
+
+services:
+  pool-control:
+    image: ghcr.io/steiner-dominik/shelly-pool-control:latest
+    container_name: pool-control
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file: .env
+    volumes:
+      - pool-data:/data
+    # Optional hardening for standalone use (chown the volume accordingly):
+    # user: "1000:1000"
+    # read_only: true
+    # tmpfs: [/tmp]
+
+volumes:
+  pool-data:

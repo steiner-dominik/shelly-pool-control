@@ -1,0 +1,49 @@
+configuration:
+  shelly_host:
+    name: Shelly host
+    description: IP or hostname of the Shelly 2PM/1PM running the pool-control script.
+  shelly_password:
+    name: Shelly password
+    description: Device admin password, if authentication is enabled on the Shelly (recommended).
+  poll_seconds:
+    name: Poll interval
+    description: Seconds between status polls of the controller.
+  simulate:
+    name: Simulator mode
+    description: Run against a built-in simulated pool instead of real hardware.
+  auth_mode:
+    name: Authentication mode
+    description: "ingress: Home Assistant authenticates panel users. local: the panel shows its own login page."
+  ingress_role:
+    name: Ingress role
+    description: Role assigned to users entering through Home Assistant ingress.
+  influx_url:
+    name: InfluxDB URL
+    description: Optional InfluxDB v2 base URL for mirroring telemetry.
+  influx_token:
+    name: InfluxDB token
+    description: API token with write access to the bucket.
+  influx_org:
+    name: InfluxDB organization
+    description: Organization name or ID.
+  influx_bucket:
+    name: InfluxDB bucket
+    description: Bucket to write pool telemetry into.
+  mqtt_host:
+    name: MQTT host
+    description: Optional broker for Home Assistant MQTT Discovery entities.
+  mqtt_port:
+    name: MQTT port
+    description: Broker port (1883 default, 8883 with TLS).
+  mqtt_user:
+    name: MQTT username
+    description: Broker credentials for the panel.
+  mqtt_password:
+    name: MQTT password
+    description: Broker credentials for the panel.
+  mqtt_tls:
+    name: MQTT TLS
+    description: Connect to the broker with TLS.
+  mqtt_prefix:
+    name: MQTT topic prefix
+    description: Prefix for state and command topics.

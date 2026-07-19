@@ -1,0 +1,59 @@
+name: "Shelly Pool Control"
+description: "Solar pool heating panel for a Shelly 2PM/1PM controller: monitoring, settings, history, backups — the control logic itself runs on the Shelly"
+version: "2026.7.20.1"
+slug: "shelly_pool_control"
+url: "https://github.com/steiner-dominik/shelly-pool-control"
+# Prebuilt multi-arch image, published from the application source repo.
+# The Supervisor pulls <image>:<version>, so this app's version must match a
+# published image tag.
+image: "ghcr.io/steiner-dominik/shelly-pool-control"
+init: false
+ingress: true
+ingress_port: 8080
+panel_icon: mdi:pool-thermometer
+panel_title: Pool Control
+watchdog: http://[HOST]:[PORT:8080]/healthz
+arch:
+  - aarch64
+  - amd64
+# The app reads /data/options.json itself. With ingress, Home Assistant
+# authenticates every request and the panel maps ingress users to the role
+# below; the local login page is used only when you expose the port directly.
+options:
+  shelly_host: ""
+  shelly_password: ""
+  poll_seconds: 5
+  simulate: false
+  auth_mode: "ingress"
+  ingress_role: "admin"
+  influx_url: ""
+  influx_token: ""
+  influx_org: ""
+  influx_bucket: ""
+  mqtt_host: ""
+  mqtt_port: 1883
+  mqtt_user: ""
+  mqtt_password: ""
+  mqtt_tls: false
+  mqtt_prefix: "pool_heating"
+schema:
+  shelly_host: str
+  shelly_password: password?
+  poll_seconds: int(1,300)
+  simulate: bool
+  auth_mode: list(ingress|local)
+  ingress_role: list(admin|operator|viewer)
+  influx_url: str?
+  influx_token: password?
+  influx_org: str?
+  influx_bucket: str?
+  mqtt_host: str?
+  mqtt_port: int(1,65535)
+  mqtt_user: str?
+  mqtt_password: password?
+  mqtt_tls: bool
+  mqtt_prefix: str
+ports:
+  8080/tcp: null
+ports_description:
+  8080/tcp: "Web UI without ingress (optional — set auth_mode: local when you expose this)"

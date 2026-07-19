@@ -1,0 +1,516 @@
+{
+  "vectors": [
+    {
+      "name": "basic_start_stop",
+      "description": "dt crosses start threshold, stops on dt_stop after min_run",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": true, "reason": "dt_start", "mode": "auto", "faults": [] } },
+        { "dt": 600, "in": { "sensors": { "mat_a": 23.5, "mat_b": 23.5 } },
+          "expect": { "relay": false, "reason": "dt_stop",
+                      "state": { "run_s_today": 600, "heat_s_today": 600 } } }
+      ]
+    },
+    {
+      "name": "min_run_enforced",
+      "description": "dt collapses immediately but pump keeps min runtime",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": true, "reason": "dt_start" } },
+        { "dt": 15, "in": { "sensors": { "mat_a": 22.5, "mat_b": 22.5 } },
+          "expect": { "relay": true, "reason": "min_run" } },
+        { "dt": 600,
+          "expect": { "relay": false, "reason": "dt_stop" } }
+      ]
+    },
+    {
+      "name": "min_pause_enforced",
+      "description": "restart blocked until min pause elapsed",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": true } },
+        { "dt": 600, "in": { "sensors": { "mat_a": 23.5, "mat_b": 23.5 } },
+          "expect": { "relay": false, "reason": "dt_stop" } },
+        { "dt": 15, "in": { "sensors": { "mat_a": 29.0, "mat_b": 29.0 } },
+          "expect": { "relay": false, "reason": "min_pause" } },
+        { "dt": 300,
+          "expect": { "relay": true, "reason": "dt_start" } }
+      ]
+    },
+    {
+      "name": "water_target_hysteresis",
+      "description": "start blocked near target, stop at target",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "water_a": 28.6, "water_b": 28.6, "mat_a": 35.0, "mat_b": 35.0 } },
+          "expect": { "relay": false, "reason": "water_max" } },
+        { "dt": 15, "in": { "sensors": { "water_a": 28.4, "water_b": 28.4 } },
+          "expect": { "relay": true, "reason": "dt_start" } },
+        { "dt": 600, "in": { "sensors": { "water_a": 29.0, "water_b": 29.0 } },
+          "expect": { "relay": false, "reason": "water_max" } }
+      ]
+    },
+    {
+      "name": "heating_window",
+      "description": "no start before window, stop when window closes",
+      "start_local_min": 500,
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": false, "reason": "window" } },
+        { "dt": 600,
+          "expect": { "relay": true, "reason": "dt_start" } },
+        { "dt": 41400,
+          "expect": { "relay": false, "reason": "window" } }
+      ]
+    },
+    {
+      "name": "boot_settle",
+      "description": "no decisions until settle time passed",
+      "uptime": 0,
+      "steps": [
+        { "dt": 5, "in": { "sensors": { "mat_a": 30.0, "mat_b": 30.0 } },
+          "expect": { "relay": false, "reason": "settle" } },
+        { "dt": 5,
+          "expect": { "relay": false, "reason": "settle" } },
+        { "dt": 15,
+          "expect": { "relay": true, "reason": "dt_start" } }
+      ]
+    },
+    {
+      "name": "reset85_at_boot",
+      "description": "85.0 right after boot is invalid; role recovers, fault clears after hold",
+      "uptime": 0,
+      "steps": [
+        { "dt": 30, "in": { "sensors": { "mat_a": 85.0, "mat_b": 85.0 } },
+          "expect": { "relay": false, "reason": "fault:sensor_fail_mat",
+                      "faults": ["sensor_fail_mat"] } },
+        { "dt": 30, "in": { "sensors": { "mat_a": 30.0, "mat_b": 30.0 } },
+          "expect": { "relay": true, "reason": "dt_start",
+                      "faults": ["sensor_fail_mat"] } },
+        { "dt": 300,
+          "expect": { "relay": true, "faults": [] } }
+      ]
+    },
+    {
+      "name": "range_invalid_degraded",
+      "description": "one water probe out of range: degraded warning, control continues",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "water_a": 60.0, "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": true, "reason": "dt_start",
+                      "warnings_has": ["degraded_water"],
+                      "effective": { "water": 22.0 } } }
+      ]
+    },
+    {
+      "name": "divergence_conservative_water",
+      "description": "divergent water pair: conservative picks max (less heating)",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "water_a": 22.0, "water_b": 25.0, "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": false, "reason": "idle",
+                      "warnings_has": ["divergence_water"],
+                      "effective": { "water": 25.0 } } }
+      ]
+    },
+    {
+      "name": "agg_policy_min",
+      "description": "close pair aggregated with min policy",
+      "config": { "agg_water": "min" },
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "water_a": 22.0, "water_b": 23.0 } },
+          "expect": { "effective": { "water": 22.0 } } }
+      ]
+    },
+    {
+      "name": "divergence_prefer_a",
+      "description": "divergent pair with prefer_a policy",
+      "config": { "divpol_water": "prefer_a" },
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "water_a": 22.0, "water_b": 25.0 } },
+          "expect": { "warnings_has": ["divergence_water"],
+                      "effective": { "water": 22.0 } } }
+      ]
+    },
+    {
+      "name": "water_dead_safe_off",
+      "description": "both water probes dead: safe_off blocks heating",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "water_a": null, "water_b": null, "mat_a": 30.0, "mat_b": 30.0 } },
+          "expect": { "relay": false, "reason": "fault:sensor_fail_water",
+                      "faults": ["sensor_fail_water"] } }
+      ]
+    },
+    {
+      "name": "fallback_schedule",
+      "description": "water dead with fallback policy: timed pattern inside fallback window",
+      "config": { "pol_sensor_fail_water": "fallback_schedule" },
+      "start_local_min": 660,
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "water_a": null, "water_b": null } },
+          "expect": { "relay": true, "reason": "fallback",
+                      "faults": ["sensor_fail_water"] } },
+        { "dt": 600, "expect": { "relay": true, "reason": "fallback" } },
+        { "dt": 600, "expect": { "relay": false, "reason": "fallback_wait" } },
+        { "dt": 6000, "expect": { "relay": true, "reason": "fallback" } }
+      ]
+    },
+    {
+      "name": "fallback_outside_window",
+      "description": "fallback pattern respects its window",
+      "config": { "pol_sensor_fail_water": "fallback_schedule" },
+      "start_local_min": 300,
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "water_a": null, "water_b": null } },
+          "expect": { "relay": false, "reason": "fallback_wait" } }
+      ]
+    },
+    {
+      "name": "both_roles_dead_fallback",
+      "description": "water and mat dead, both policies fallback: pattern runs",
+      "config": { "pol_sensor_fail_water": "fallback_schedule",
+                  "pol_sensor_fail_mat": "fallback_schedule" },
+      "start_local_min": 660,
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "water_a": null, "water_b": null, "mat_a": null, "mat_b": null } },
+          "expect": { "relay": true, "reason": "fallback",
+                      "faults": ["sensor_fail_mat", "sensor_fail_water"] } }
+      ]
+    },
+    {
+      "name": "both_roles_dead_mixed_policies",
+      "description": "mat policy safe_off wins over water fallback when both dead",
+      "config": { "pol_sensor_fail_water": "fallback_schedule" },
+      "start_local_min": 660,
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "water_a": null, "water_b": null, "mat_a": null, "mat_b": null } },
+          "expect": { "relay": false, "reason": "fault:sensor_fail_water" } }
+      ]
+    },
+    {
+      "name": "continue_mat_only",
+      "description": "water dead: heat on mat vs assumed water temp",
+      "config": { "pol_sensor_fail_water": "continue_mat_only" },
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "water_a": null, "water_b": null, "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": true, "reason": "dt_start",
+                      "faults": ["sensor_fail_water"] } }
+      ]
+    },
+    {
+      "name": "air_fail_warn_only",
+      "description": "air probe dead: warning fault, control unaffected",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "air": null, "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": true, "reason": "dt_start",
+                      "faults": ["sensor_fail_air"] } }
+      ]
+    },
+    {
+      "name": "air_fail_safe_off",
+      "description": "air probe dead with safe_off policy blocks",
+      "config": { "pol_sensor_fail_air": "safe_off" },
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "air": null, "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": false, "reason": "fault:sensor_fail_air" } }
+      ]
+    },
+    {
+      "name": "dry_run_lockout",
+      "description": "low power after grace: lockout, manual reset, restart after pause",
+      "config": { "pump_power_nominal": 800 },
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": true, "reason": "dt_start" } },
+        { "dt": 15, "expect": { "relay": true } },
+        { "dt": 15, "in": { "power_w": 300 },
+          "expect": { "relay": true, "reason": "heating", "faults": [] } },
+        { "dt": 15, "expect": { "relay": true, "faults": [] } },
+        { "dt": 15, "expect": { "relay": false, "reason": "fault:dry_run",
+                                "faults": ["dry_run"] } },
+        { "dt": 15, "in": { "power_w": 0 },
+          "cmd": [ { "cmd": "reset_fault", "class": "dry_run" } ],
+          "expect": { "relay": false, "reason": "min_pause", "faults": [] } },
+        { "dt": 300, "in": { "power_w": 800 },
+          "expect": { "relay": true, "reason": "dt_start" } }
+      ]
+    },
+    {
+      "name": "dry_run_retry_then_lockout",
+      "description": "retry policy: one auto-retry, second trip locks out",
+      "config": { "pump_power_nominal": 800, "power_fault_action": "retry",
+                  "retry_max": 1, "retry_backoff_s": 300 },
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": true } },
+        { "dt": 15, "expect": { "relay": true } },
+        { "dt": 15, "in": { "power_w": 300 },
+          "expect": { "relay": true, "faults": [] } },
+        { "dt": 30, "expect": { "relay": false, "reason": "fault:dry_run",
+                                "faults": ["dry_run"] } },
+        { "dt": 300, "in": { "power_w": 0 },
+          "expect": { "relay": true, "reason": "dt_start", "faults": [] } },
+        { "dt": 15, "in": { "power_w": 300 },
+          "expect": { "relay": true, "faults": [] } },
+        { "dt": 30, "expect": { "relay": false, "reason": "fault:dry_run",
+                                "faults": ["dry_run"] } },
+        { "dt": 15, "in": { "power_w": 0 },
+          "cmd": [ { "cmd": "reset_fault", "class": "dry_run" } ],
+          "expect": { "faults": [] } }
+      ]
+    },
+    {
+      "name": "overload_always_lockout",
+      "description": "overload locks out even under retry policy",
+      "config": { "pump_power_nominal": 800, "power_fault_action": "retry" },
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": true } },
+        { "dt": 15, "in": { "power_w": 1200 },
+          "expect": { "relay": true, "faults": [] } },
+        { "dt": 30, "expect": { "relay": false, "reason": "fault:overload",
+                                "faults": ["overload"] } }
+      ]
+    },
+    {
+      "name": "no_power_lockout",
+      "description": "commanded on but no power draw: breaker/pump dead",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": true } },
+        { "dt": 15, "in": { "power_w": 3 },
+          "expect": { "relay": true, "faults": [] } },
+        { "dt": 30, "expect": { "relay": false, "reason": "fault:no_power",
+                                "faults": ["no_power"] } }
+      ]
+    },
+    {
+      "name": "relay_stuck",
+      "description": "power flowing while commanded off",
+      "steps": [
+        { "dt": 15, "in": { "power_w": 500 },
+          "expect": { "relay": false, "reason": "idle",
+                      "faults": ["relay_stuck"] } },
+        { "dt": 15, "in": { "power_w": 0 },
+          "expect": { "faults": ["relay_stuck"] } },
+        { "dt": 300, "expect": { "faults": [] } }
+      ]
+    },
+    {
+      "name": "overtemp_circulate",
+      "description": "hot mat circulates until absolute water max",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 75.0, "mat_b": 75.0, "water_a": 25.0, "water_b": 25.0 } },
+          "expect": { "relay": true, "reason": "overtemp_circulate",
+                      "faults": ["mat_overtemp"] } },
+        { "dt": 15, "in": { "sensors": { "water_a": 29.0, "water_b": 29.0 } },
+          "expect": { "relay": true, "reason": "overtemp_circulate" } },
+        { "dt": 15, "in": { "sensors": { "water_a": 32.5, "water_b": 32.5 } },
+          "expect": { "relay": false, "reason": "water_max",
+                      "faults": ["mat_overtemp"] } }
+      ]
+    },
+    {
+      "name": "overtemp_alert_only",
+      "description": "alert_only raises the fault but normal control continues",
+      "config": { "mat_overtemp_action": "alert_only" },
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 75.0, "mat_b": 75.0, "water_a": 25.0, "water_b": 25.0 } },
+          "expect": { "relay": true, "reason": "dt_start",
+                      "faults": ["mat_overtemp"] } }
+      ]
+    },
+    {
+      "name": "overtemp_lockout",
+      "description": "lockout action blocks until manual reset after cooling",
+      "config": { "mat_overtemp_action": "lockout" },
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 75.0, "mat_b": 75.0 } },
+          "expect": { "relay": false, "reason": "fault:mat_overtemp",
+                      "faults": ["mat_overtemp"] } },
+        { "dt": 15, "in": { "sensors": { "mat_a": 60.0, "mat_b": 60.0 } },
+          "cmd": [ { "cmd": "reset_fault", "class": "mat_overtemp" } ],
+          "expect": { "relay": true, "reason": "dt_start", "faults": [] } }
+      ]
+    },
+    {
+      "name": "frost_cycles",
+      "description": "frost protection runs X every Y outside heating window",
+      "start_local_min": 200,
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "air": 1.0 } },
+          "expect": { "relay": true, "reason": "frost" } },
+        { "dt": 300, "expect": { "relay": true, "reason": "frost" } },
+        { "dt": 400, "expect": { "relay": false, "reason": "idle" } },
+        { "dt": 3000, "expect": { "relay": true, "reason": "frost" } }
+      ]
+    },
+    {
+      "name": "frost_in_mode_off",
+      "description": "frost protection overrides mode off",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "air": 8.0 } },
+          "cmd": [ { "cmd": "mode", "mode": "off" } ],
+          "expect": { "relay": false, "reason": "off", "mode": "off" } },
+        { "dt": 15, "in": { "sensors": { "air": 1.0 } },
+          "expect": { "relay": true, "reason": "frost", "mode": "off" } }
+      ]
+    },
+    {
+      "name": "winter_disables_everything",
+      "description": "winter mode: pump never runs, frost logic off (drained)",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "air": 1.0, "mat_a": 30.0, "mat_b": 30.0 } },
+          "cmd": [ { "cmd": "mode", "mode": "winter" } ],
+          "expect": { "relay": false, "reason": "winter", "mode": "winter" } }
+      ]
+    },
+    {
+      "name": "force_on_timeout",
+      "description": "force_on expires back to previous mode",
+      "steps": [
+        { "dt": 15, "cmd": [ { "cmd": "mode", "mode": "force_on", "timeout_s": 120 } ],
+          "expect": { "relay": true, "reason": "force", "mode": "force_on" } },
+        { "dt": 60, "expect": { "relay": true, "reason": "force" } },
+        { "dt": 90, "expect": { "relay": false, "reason": "idle", "mode": "auto" } }
+      ]
+    },
+    {
+      "name": "force_timeout_clamped",
+      "description": "requested timeout below minimum is clamped to 60 s",
+      "steps": [
+        { "dt": 15, "cmd": [ { "cmd": "mode", "mode": "force_on", "timeout_s": 10 } ],
+          "expect": { "relay": true, "mode": "force_on" } },
+        { "dt": 30, "expect": { "relay": true, "mode": "force_on" } },
+        { "dt": 45, "expect": { "relay": false, "mode": "auto" } }
+      ]
+    },
+    {
+      "name": "manual_run_command",
+      "description": "run command behaves like force_on with explicit duration",
+      "steps": [
+        { "dt": 15, "cmd": [ { "cmd": "run", "duration_s": 120 } ],
+          "expect": { "relay": true, "reason": "force", "mode": "force_on" } },
+        { "dt": 150, "expect": { "relay": false, "mode": "auto" } }
+      ]
+    },
+    {
+      "name": "boost_ignores_window",
+      "description": "boost heats outside the window while dt above dt_stop, expires",
+      "config": { "boost_timeout_s": 600 },
+      "start_local_min": 300,
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 26.0, "mat_b": 26.0 } },
+          "cmd": [ { "cmd": "mode", "mode": "boost" } ],
+          "expect": { "relay": true, "reason": "boost", "mode": "boost" } },
+        { "dt": 15, "in": { "sensors": { "mat_a": 23.5, "mat_b": 23.5 } },
+          "expect": { "relay": false, "reason": "boost_wait" } },
+        { "dt": 600, "expect": { "mode": "auto" } }
+      ]
+    },
+    {
+      "name": "boost_absolute_water_max",
+      "description": "boost respects the absolute water maximum",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "water_a": 31.5, "water_b": 31.5, "mat_a": 45.0, "mat_b": 45.0 } },
+          "cmd": [ { "cmd": "mode", "mode": "boost" } ],
+          "expect": { "relay": true, "reason": "boost" } },
+        { "dt": 15, "in": { "sensors": { "water_a": 32.5, "water_b": 32.5 } },
+          "expect": { "relay": false, "reason": "abs_water_max" } }
+      ]
+    },
+    {
+      "name": "filtration_deficit_blocks",
+      "description": "deficit run starts at check time, splits into blocks, stops at quota",
+      "config": { "filt_target_s": 900, "filt_block_max_s": 600, "filt_block_pause_s": 300 },
+      "start_local_min": 1015,
+      "steps": [
+        { "dt": 15, "expect": { "relay": false, "reason": "idle" } },
+        { "dt": 300, "expect": { "relay": true, "reason": "quota_deficit" } },
+        { "dt": 600, "expect": { "relay": false, "reason": "quota_pause",
+                                 "state": { "run_s_today": 600 } } },
+        { "dt": 150, "expect": { "relay": false, "reason": "quota_pause" } },
+        { "dt": 150, "expect": { "relay": true, "reason": "quota_deficit" } },
+        { "dt": 300, "expect": { "relay": false, "reason": "idle",
+                                 "state": { "run_s_today": 900 } } }
+      ]
+    },
+    {
+      "name": "day_rollover_resets_counters",
+      "description": "daily counters reset when the local day changes",
+      "start_local_min": 1430,
+      "initial_state": { "run_s_today": 5000, "heat_s_today": 1000 },
+      "steps": [
+        { "dt": 15, "expect": { "state": { "run_s_today": 5000 } } },
+        { "dt": 660, "expect": { "state": { "run_s_today": 0, "heat_s_today": 0 } } }
+      ]
+    },
+    {
+      "name": "time_invalid_pure_dt",
+      "description": "no valid time: window skipped, pure dT control, warning raised",
+      "time_valid": false,
+      "start_local_min": 300,
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 28.0, "mat_b": 28.0 } },
+          "expect": { "relay": true, "reason": "dt_start",
+                      "warnings_has": ["time_invalid"] } }
+      ]
+    },
+    {
+      "name": "time_invalid_no_quota",
+      "description": "no valid time: filtration deficit logic is paused",
+      "time_valid": false,
+      "start_local_min": 1050,
+      "steps": [
+        { "dt": 15, "expect": { "relay": false, "reason": "idle",
+                                "warnings_has": ["time_invalid"] } }
+      ]
+    },
+    {
+      "name": "invalid_mode_command_ignored",
+      "description": "unknown mode name is rejected",
+      "steps": [
+        { "dt": 15, "cmd": [ { "cmd": "mode", "mode": "banana" } ],
+          "expect": { "relay": false, "mode": "auto" } }
+      ]
+    },
+    {
+      "name": "roc_spike_rejected_then_accepted",
+      "description": "single-tick spike is rejected; persistent change is accepted after aging",
+      "steps": [
+        { "dt": 15, "expect": { "relay": false } },
+        { "dt": 15, "in": { "sensors": { "water_a": 35.0 } },
+          "expect": { "warnings_has": ["degraded_water"],
+                      "effective": { "water": 22.0 } } },
+        { "dt": 15, "expect": { "warnings_has": ["degraded_water"] } },
+        { "dt": 15, "expect": { "warnings_has": ["divergence_water"],
+                                "effective": { "water": 35.0 } } }
+      ]
+    },
+    {
+      "name": "calibrate_command",
+      "description": "pump calibration stores nominal power in state",
+      "steps": [
+        { "dt": 15, "cmd": [ { "cmd": "calibrate", "power_w": 850 } ],
+          "expect": { "state": { "pump_nominal": 850.0 } } }
+      ]
+    },
+    {
+      "name": "sampling_runs",
+      "description": "optional sampling: run duration every interval",
+      "config": { "sample_enabled": true, "sample_interval_s": 600, "sample_duration_s": 120 },
+      "steps": [
+        { "dt": 15, "expect": { "relay": true, "reason": "sample" } },
+        { "dt": 60, "expect": { "relay": true, "reason": "sample" } },
+        { "dt": 120, "expect": { "relay": false, "reason": "idle" } },
+        { "dt": 500, "expect": { "relay": true, "reason": "sample" } }
+      ]
+    },
+    {
+      "name": "mode_off_stays_off",
+      "description": "mode off ignores heating conditions",
+      "steps": [
+        { "dt": 15, "in": { "sensors": { "mat_a": 30.0, "mat_b": 30.0 } },
+          "cmd": [ { "cmd": "mode", "mode": "off" } ],
+          "expect": { "relay": false, "reason": "off", "mode": "off" } }
+      ]
+    }
+  ]
+}
