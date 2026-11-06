@@ -1,5 +1,5 @@
 # ---- frontend build (runs on the build platform, output is arch-neutral) ----
-FROM --platform=$BUILDPLATFORM node:24-alpine AS frontend
+FROM --platform=$BUILDPLATFORM node:26-alpine AS frontend
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -10,7 +10,7 @@ ENV POOL_VERSION=$VERSION
 RUN mkdir -p /server/app/static && npm run build
 
 # ---- runtime ----------------------------------------------------------------
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     POOL_DATA_DIR=/data \

@@ -1,18 +1,52 @@
+# Automated dependency updates. Every merge to main publishes a release, so
+# updates are grouped (one PR per ecosystem, i.e. one release instead of one
+# per package) and fresh versions wait a few days (cooldown) before being
+# proposed. Security updates bypass both and arrive immediately.
 version: 2
 updates:
+  # server/requirements*.txt use ">=" floors, so every build already gets the
+  # newest compatible release; only propose a change when a new version falls
+  # OUTSIDE the range (no more "raise the floor" PRs that change nothing).
   - package-ecosystem: pip
     directory: /server
     schedule:
       interval: weekly
+      day: monday
+    versioning-strategy: increase-if-necessary
+    cooldown:
+      default-days: 5
+    groups:
+      python:
+        patterns: ["*"]
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+      semver-major-days: 14
+    groups:
+      frontend:
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    groups:
+      github-actions:
+        patterns: ["*"]
+  # Base images (node:*-alpine build stage, python:*-slim runtime)
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    groups:
+      docker:
+        patterns: ["*"]
